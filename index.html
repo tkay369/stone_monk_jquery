@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-latest.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.0/moment.min.js"></script>
+    <title></title>
+    <style>
+        table{
+            padding: 10px;
+        }
+        table.detail {
+        border-collapse: collapse;
+        text-align: left;
+        line-height: 1.5;
+        margin : 20px 10px;
+        }
+        table.detail th {
+        width: 150px;
+        padding: 10px;
+        font-weight: bold;
+        vertical-align: top;
+        --border: 1px solid #ccc;
+        text-align: right;
+        }
+        table.detail td {
+        width: 350px;
+        padding: 10px;
+        vertical-align: top;
+        --border: 1px solid #ccc;
+        text-align: left;
+        }
+
+        .left{
+            text-align: left;
+        }
+        .right{
+            text-align: right;
+        }
+        .center{
+            text-align: center;
+        }
+
+        .txt_line_title {
+            width: 300px;
+            display: inline-block;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+        .txt_line_singer {
+            width: 150px;
+            display: inline-block;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+        }
+    </style>
+    <script>
+    var globalChartType = "";
+    var globalPageIndex=0;
+    $( function() {
+        $( "#tabs" ).tabs();
+        fnChartListSubmit("domestic");
+        var currentTime = getCurrentDate();
+        $( "#currentTime" ).text(currentTime);
+
+
+        $(window).scroll(function() {
+            if ($(window).scrollTop() == $(document).height() - $(window).height()) {
+                globalPageIndex++;
+                fnChartListSubmit(globalChartType, globalPageIndex);
+            }
+        });
+    });
+    function getCurrentDate(){
+        var date = new Date();
+        // var year = moment(date).format("YYYY");
+        // var month = moment(date).format("M");
+        // var date = moment(date).format("D");
+        // var currentTime = moment(date).format('YYYY년 M월 D일');
+        var year = (new Date()).getFullYear();
+        var month = (new Date()).getMonth()+1;
+        var date =(new Date()).getDate();
+        var hour = (new Date()).getHours();
+        var currentTime = year+"년 "+month+"월 "+date+"일 "+hour+":00";
+        return currentTime;
+    }
+    function fnRest(method,url, data, callback){
+        $.ajax({
+        method: method,
+        url: url,
+        data: data
+        })
+        .done(function( response ) {
+            console.log(response);
+            callback(response);
+        });
+    }
+
+    function fnChartListSubmit(chartType, pageIndex){
+        chartType = chartType ? chartType : "domestic";
+        globalChartType = chartType;
+        if(!pageIndex){
+            globalPageIndex=0;
+            pageIndex=0; 
+        }
+        fnRest("GET", "http://localhost:3300/v1/chart/"+chartType+"?pageIndex="+pageIndex, {}, fnChartListSubmitCallback);
+    }
+    
+    function fnChartListSubmitCallback(response){
+        fnTableGenerator(response.chartList, globalChartType+"ChartListTable");
+    }
+
+    function fnTableGenerator(data, domId){
+        if(globalPageIndex == 0){
+            $("#"+domId).empty();
+        }
+        var tbody = $("<tbody/>");
+        for(var i=0; i < data.length; i++){
+            var tr = $("<tr/>");
+            var td = $("<td/>");
+            var img = $("<img/>");
+            var span = $("<span/>")
+            console.log(data[i]);
+            tr.append(td.clone().append(data[i].id).attr({"width": "50px"}));
+            tr.append(td.clone().append(img.clone().attr({"src" : "./images/"+data[i].imageUrl})).attr({"width": "200px"}));
+            tr.append(td.clone().append(data[i].title).attr({"onClick" : "fnChartDetailSubmit("+data[i].id+")"}).addClass("left txt_line_title").attr({"width": "300px"}));
+            tr.append(td.clone().append(data[i].singer).addClass("right txt_line_singer").attr({"width": "150px"}));
+            tr.appendTo(tbody);
+        }
+        tbody.appendTo($("#"+domId));
+    }
+
+    function fnChartDetailSubmit(id){
+        fnRest("GET", "http://localhost:3300/v1/chart/detail/"+id, {}, fnChartDetailSubmitCallback);
+    }
+
+    function fnChartDetailSubmitCallback(response){
+        var chart = response.chart;
+        $("#singer").text(chart.singer?chart.singer:"");
+        $("#lyricist").text(chart.lyricist?chart.lyricist:"");
+        $("#melodizer").text(chart.melodizer?chart.melodizer:"");
+        $("#genre").text(chart.genre?chart.genre:"");
+
+        $("#chartList").hide();
+        $("#chartDetail").show();
+    }
+
+    function fnBack(){
+        $("#chartDetail").hide();
+        $("#chartList").show();
+        fnListInit();
+        $("#domesticTab").click();
+    }
+
+    function fnListInit(){
+        $("#domesticChartListTable").empty();
+        $("#overseasChartListTable").empty();
+        globalPageIndex=0;
+    }
+
+    </script>
+</head>
+<body>
+    <div id="chartList">
+        <header>
+            <div class="title center">음악 차트</div>
+            <div class="current-time center" id="currentTime"></div>
+        </header>
+        <article>
+            <div id="tabs">
+                <ul>
+                    <li><a href="#domestic" id="domesticTab" onclick="fnChartListSubmit('domestic');">국내</a></li>
+                    <li><a href="#overseas" id="overseasTab" onclick="fnChartListSubmit('overseas');">해외</a></li>
+                </ul>
+                <div id="domestic">
+                    <table id="domesticChartListTable" width="100%">
+                    </table>
+                </div>
+                <div id="overseas">
+                    <table id="overseasChartListTable" width="100%">
+                    </table>
+                </div>
+            </div>
+        </article>
+    </div>
+    <div id="chartDetail" style="display: none;">
+        <header>
+            <div id="backBtn" onclick="fnBack();">뒤로가기</div>
+            <div class="title center" id="title">음악 차트</div>
+            <div class="singer center" id="singer"></div>
+        </header>
+        <article>
+            <table class="detail" width="100%">
+                <tbody>
+                    <tr>
+                        <th>작사</th>
+                        <td id="lyricist"></td>
+                    </tr>
+                    <tr>
+                        <th>작곡</th>
+                        <td id="melodizer"></td>
+                    </tr>
+                    <tr>
+                        <th>장르</th>
+                        <td id="genre"></td>
+                    </tr>
+                </tbody>
+            </table>
+        </article>
+    </div>
+</body>
+</html>
