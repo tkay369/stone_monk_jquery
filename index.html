@@ -3,6 +3,8 @@
 <head>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <link rel="stylesheet" href="https://pro.fontawesome.com/releases/v5.10.0/css/all.css" integrity="sha384-AYmEC3Yw5cVb3ZcuHtOA93w35dYTsvhLPVnYs9eStHfGJvOvKxVfELGroGkvsg+p" crossorigin="anonymous"/>
     <script src="https://code.jquery.com/jquery-latest.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.18.0/moment.min.js"></script>
@@ -57,23 +59,29 @@
             text-overflow:ellipsis;
             white-space:nowrap;
         }
+        #backBtn{
+            margin-left: 30px;
+        }
+        header{
+            margin-left: 20px;
+            margin-right: 20px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+            font-weight: bold;
+        }
+        header .title{
+            font-size: 20px;
+        }
     </style>
     <script>
     var globalChartType = "";
-    var globalPageIndex=0;
+    var PAGE_SIZE = 7;
     $( function() {
         $( "#tabs" ).tabs();
         fnChartListSubmit("domestic");
         var currentTime = getCurrentDate();
         $( "#currentTime" ).text(currentTime);
-
-
-        $(window).scroll(function() {
-            if ($(window).scrollTop() == $(document).height() - $(window).height()) {
-                globalPageIndex++;
-                fnChartListSubmit(globalChartType, globalPageIndex);
-            }
-        });
+        callScrollingPaing();
     });
     function getCurrentDate(){
         var date = new Date();
@@ -88,6 +96,14 @@
         var currentTime = year+"년 "+month+"월 "+date+"일 "+hour+":00";
         return currentTime;
     }
+    function callScrollingPaing(){
+        $(window).scroll(function() {
+            // index만 가지고 page
+            if ($(window).scrollTop() == $(document).height() - $(window).height()) {
+                fnChartListSubmit(globalChartType);
+            }
+        });
+    }
     function fnRest(method,url, data, callback){
         $.ajax({
         method: method,
@@ -100,24 +116,31 @@
         });
     }
 
-    function fnChartListSubmit(chartType, pageIndex){
+    function fnChartListSubmit(chartType, type){
         chartType = chartType ? chartType : "domestic";
         globalChartType = chartType;
-        if(!pageIndex){
-            globalPageIndex=0;
-            pageIndex=0; 
+        // paingSize 가 정해진 경우
+        var listSize = 0;
+        if(type == 'init'){
+            $("#"+chartType+"ChartListTable").empty();
+        }
+        listSize = $("#"+chartType+"ChartListTable tr").length;
+            
+        console.log("listSize :: " + listSize);
+        var pageIndex = 0;
+        if(listSize > 0){
+            pageIndex =  listSize / PAGE_SIZE;
         }
         fnRest("GET", "http://localhost:3300/v1/chart/"+chartType+"?pageIndex="+pageIndex, {}, fnChartListSubmitCallback);
     }
     
     function fnChartListSubmitCallback(response){
-        fnTableGenerator(response.chartList, globalChartType+"ChartListTable");
+        if(response.chartList && response.chartList.length > 0){
+            fnTableGenerator(response.chartList, globalChartType+"ChartListTable");
+        }
     }
 
     function fnTableGenerator(data, domId){
-        if(globalPageIndex == 0){
-            $("#"+domId).empty();
-        }
         var tbody = $("<tbody/>");
         for(var i=0; i < data.length; i++){
             var tr = $("<tr/>");
@@ -159,7 +182,6 @@
     function fnListInit(){
         $("#domesticChartListTable").empty();
         $("#overseasChartListTable").empty();
-        globalPageIndex=0;
     }
 
     </script>
@@ -173,8 +195,8 @@
         <article>
             <div id="tabs">
                 <ul>
-                    <li><a href="#domestic" id="domesticTab" onclick="fnChartListSubmit('domestic');">국내</a></li>
-                    <li><a href="#overseas" id="overseasTab" onclick="fnChartListSubmit('overseas');">해외</a></li>
+                    <li><a href="#domestic" id="domesticTab" onclick="fnChartListSubmit('domestic', 'init');">국내</a></li>
+                    <li><a href="#overseas" id="overseasTab" onclick="fnChartListSubmit('overseas', 'init');">해외</a></li>
                 </ul>
                 <div id="domestic">
                     <table id="domesticChartListTable" width="100%">
@@ -189,7 +211,7 @@
     </div>
     <div id="chartDetail" style="display: none;">
         <header>
-            <div id="backBtn" onclick="fnBack();">뒤로가기</div>
+            <div id="backBtn" onclick="fnBack();"><span class="fas fa-arrow-left"></span></div>
             <div class="title center" id="title">음악 차트</div>
             <div class="singer center" id="singer"></div>
         </header>
