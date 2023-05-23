@@ -1,0 +1,19 @@
+SELECT tsu.USE_NO as use_no
+    ,tsu.USE_DISTANCE as use_distance
+    ,tsu.USE_TIME as use_time
+    ,DATE_FORMAT(tsu.USE_START_DT, '%Y-%m-%d %H:%i') as use_start_dt
+    ,DATE_FORMAT(tsu.USE_END_DT, '%Y-%m-%d %H:%i') as use_end_dt
+    ,DATE_FORMAT(tsup.PAY_DATETIME, '%Y-%m-%d %H:%i') as pay_datetime
+    ,sum(case when tsup.PAYMETHOD_CODE='C' then tsup.PAY_COST ELSE 0 END) AS card_pay
+    ,sum(case when tsup.PAYMETHOD_CODE='P' then tsup.PAY_COST ELSE 0 END) AS point_pay
+FROM test_service.t_svc_use as tsu
+JOIN test_service.t_svc_use_pay as tsup ON tsu.USE_NO = tsup.USE_NO
+WHERE 1=1
+AND tsu.USER_NO=#{user_no} 
+AND DATE(tsu.USE_START_DT)>=#{start_dt}
+GROUP BY tsu.use_no
+        ,tsu.use_distance
+        ,tsu.use_time
+        ,tsu.use_start_dt
+        ,tsu.use_end_dt
+        ,tsup.pay_datetime
